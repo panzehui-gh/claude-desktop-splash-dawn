@@ -31,6 +31,29 @@ The character images, the Live2D eye-opening video and the icons belong to the o
 
 ## Installation
 
+### The easy way: let Claude install it
+
+If you use **Claude Code** (the Code tab in the Claude desktop app), copy the text below and send it to Claude; it installs everything by following this README. (A normal Claude chat cannot run commands on your computer, so it cannot do this.)
+
+```text
+Please install Claude Desktop Splash · Dawn (a startup animation for the Claude desktop app) on this Windows computer: https://github.com/panzehui-gh/claude-desktop-splash-dawn
+
+Follow the "Installation" section of the repository's README. In short:
+
+1. Put the repository in a folder named claude-desktop-splash-dawn inside my Documents folder (git clone if git is installed, otherwise download the ZIP and extract it). The folder must not be moved afterwards.
+2. Run tools\get-art.ps1 to download the original authors' character art and Live2D video.
+3. Check whether Python and ffmpeg are installed. If one is missing, install it with winget, but ask me first. Then run "py -m pip install edge-tts", "py tools\make-voice.py" and "py tools\make-video-variants.py". The last one takes several minutes, so it can run in the background.
+4. Run launcher\make_shortcut.ps1 and tools\build-exe.ps1 to build "Claude (Dawn).exe".
+5. Make two desktop shortcuts to "Claude (Dawn).exe": one named "Claude (Dawn)", and one named "Claude (Dawn) Settings" with " --settings" added at the end of its target. If my antivirus deletes a shortcut, tell me.
+6. Do not quit or restart Claude for me. When everything is done, tell me how to try it: quit Claude completely (right-click the tray icon, then Quit) and double-click "Claude (Dawn)". The first run opens the settings page, where I choose my name, voice and video quality myself.
+
+Look at what each script does before running it. If a step fails, tell me why instead of skipping it silently.
+```
+
+Claude stops before the last step on purpose: Claude Code runs inside the Claude desktop app, so quitting Claude would also end that session. You try it yourself, and choose your name, voice and quality on the settings page.
+
+### By hand
+
 1. Put this repository in a permanent place (the desktop shortcut remembers the path, so don't move it later).
 2. Fetch the character art:
    ```powershell

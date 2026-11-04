@@ -31,6 +31,29 @@
 
 ## 安装
 
+### 最简单的方法：让 Claude 帮你安装
+
+如果你用的是 **Claude Code**（Claude 桌面版里的 Code 功能），复制下面这段话发给 Claude，它会照着这份 README 帮你装好。（普通的 Claude 聊天不能在电脑上运行命令，所以做不到。）
+
+```text
+请帮我在这台 Windows 电脑上安装 Claude Desktop Splash · Dawn（Claude 桌面版的开屏动画）：https://github.com/panzehui-gh/claude-desktop-splash-dawn
+
+请按仓库 README 里“安装”一节完成安装。要点：
+
+1. 把仓库下载到“文档”文件夹下的 claude-desktop-splash-dawn（有 git 就 clone，没有就下载 ZIP 解压）。装好后这个文件夹不要再移动。
+2. 运行 tools\get-art.ps1，下载原作者的角色图和 Live2D 视频。
+3. 检查电脑上有没有 Python 和 ffmpeg，缺的话用 winget 安装（安装前先问我）。然后运行“py -m pip install edge-tts”“py tools\make-voice.py”和“py tools\make-video-variants.py”。最后一条要几分钟到十几分钟，可以放到后台运行。
+4. 运行 launcher\make_shortcut.ps1 和 tools\build-exe.ps1，生成“Claude (Dawn).exe”。
+5. 在桌面上创建两个指向“Claude (Dawn).exe”的快捷方式：一个叫“Claude (Dawn)”，一个叫“Claude (Dawn) 设置”，目标末尾加上“ --settings”。如果快捷方式被杀毒软件删掉了，告诉我。
+6. 不要替我退出或重启 Claude。全部完成后告诉我怎么试：先完全退出 Claude（托盘图标右键 → 退出），再双击“Claude (Dawn)”。第一次会先打开设置页面，称呼、声音和画质由我自己选。
+
+运行每个脚本之前，先看一遍它会做什么。某一步失败的话，告诉我原因，不要悄悄跳过。
+```
+
+Claude 会在最后一步之前停下，这是故意的：Claude Code 本身运行在 Claude 桌面版里，退出 Claude 会让它的会话也跟着断掉。最后由你自己试，称呼、声音和画质也在设置页面里由你自己选。
+
+### 手动安装
+
 1. 把这个仓库放在一个固定的位置（桌面快捷方式会记住路径，之后不要再移动）。
 2. 下载角色图：
    ```powershell
