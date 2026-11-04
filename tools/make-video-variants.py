@@ -9,12 +9,12 @@ Needs ffmpeg (on PATH, or --ffmpeg). Reads the 4K original from the art folder (
 and writes assets/video/<quality>.mp4. These copies are made from the original authors' video, so they are not part of
 this repository (see .gitignore) and the original's license applies to them.
 
-Longer: the original is 5 s, and with the closing voice the splash shows the video for about 8.5 s. The video plays at
-normal speed until 2.5 s (her eyes are open by then), then eases into slow motion (0.36x) and keeps moving to the end, like
+Longer: the original is 5 s, and with the closing voice the splash shows the video for about 8.8 s (until the warm light covers it). The video plays at
+normal speed until 2.5 s (her eyes are open by then), then eases into slow motion (0.32x) and keeps moving to the end, like
 time slowing down while she speaks. The slow part gets real in-between frames (motion-compensated interpolation), made
 only from the frames where the character's pose changes (see pose_frames), so the character moves smoothly too. Everything only moves forward: an earlier version played the end backwards and then forwards again, and
 the falling leaves visibly flew backwards.
-慢动作：原视频 2.5 秒以后渐渐放慢到 0.36 倍并一直保持（补出中间帧），树叶、头发始终向前动，不倒放、不定格。
+慢动作：原视频 2.5 秒以后渐渐放慢到 0.32 倍并一直保持（补出中间帧），树叶、头发始终向前动，不倒放、不定格。
 The slow-motion master (1440p60, made once, takes a few minutes) is kept as assets/video/_master.mp4; all levels are
 scaled from it.
 
@@ -29,7 +29,8 @@ OUT = os.path.join(ROOT, 'assets', 'video')
 MASTER = os.path.join(OUT, '_master.mp4')
 SLOW_FROM = 2.5    # seconds into the original where the slowdown starts (eyes open)
 RAMP = 1.2         # seconds (output) to ease from normal speed down to SLOW
-SLOW = 0.36        # final speed: deep enough to cover the voice line, not so deep that each pose is stretched too far
+SLOW = 0.32        # final speed: deep enough that the video lasts until the warm light covers the picture (with the default
+                   # voice), not so deep that each pose is stretched too far
 EVEN_BLUR = 0.8    # blur for frames right at a pose (1440p pixels), see make_master
 LEVELS = {  # name: (height, fps, crf)
     '480p30': (480, 30, 21), '480p60': (480, 60, 21),
