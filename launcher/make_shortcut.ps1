@@ -1,0 +1,105 @@
+<#
+  Creates the splash shortcut.
+    -LinkName  file name of the shortcut (without .lnk)
+    -Desktop   also copy it to the real Desktop folder
+    -Art       new | classic  -- bake this artwork into the shortcut (default: the art set in config.js)
+  Also resolves Claude's AppUserModelID into config.json and extracts Claude's icon into claude.ico.
+  Note: the shortcut is written through IShellLink (Unicode). WScript.Shell cannot handle non-ANSI paths.
+#>
+param(
+  [string]$LinkName = 'Claude (Dawn)',
+  [switch]$Desktop,
+  [ValidateSet('new','classic')][string]$Art
+)
+$ErrorActionPreference = 'Stop'
+$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+Add-Type -ErrorAction SilentlyContinue @'
+using System;
+using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
+
+[ComImport, Guid("00021401-0000-0000-C000-000000000046")]
+class CShellLink { }
+
+[ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("000214F9-0000-0000-C000-000000000046")]
+interface IShellLinkW {
+  void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder f, int cch, IntPtr pfd, int flags);
+  void GetIDList(out IntPtr ppidl);
+  void SetIDList(IntPtr pidl);
+  void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int cch);
+  void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string s);
+  void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int cch);
+  void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string s);
+  void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int cch);
+  void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string s);
+  void GetHotkey(out short w);
+  void SetHotkey(short w);
+  void GetShowCmd(out int i);
+  void SetShowCmd(int i);
+  void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder s, int cch, out int idx);
+  void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string s, int idx);
+  void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string s, int reserved);
+  void Resolve(IntPtr hwnd, int flags);
+  void SetPath([MarshalAs(UnmanagedType.LPWStr)] string s);
+}
+
+public static class LinkMaker {
+  public static void Create(string lnk, string target, string args, string workDir, string icon, string desc, int showCmd) {
+    IShellLinkW l = (IShellLinkW)new CShellLink();
+    l.SetPath(target);
+    l.SetArguments(args);
+    l.SetWorkingDirectory(workDir);
+    l.SetDescription(desc);
+    l.SetShowCmd(showCmd);
+    if (!string.IsNullOrEmpty(icon)) l.SetIconLocation(icon, 0);
+    ((IPersistFile)l).Save(lnk, true);
+  }
+}
+'@
+
+# AppUserModelID of the installed Claude app
+$aumid = $null
+# Several Start-menu entries can be called "Claude" (e.g. claude.ai installed as a web app): prefer the Store app's ID (Claude_...!...).
+try {
+  $found = @(Get-StartApps | Where-Object { $_.Name -eq 'Claude' })
+  $pick = $found | Where-Object { $_.AppID -like 'Claude_*!*' } | Select-Object -First 1
+  if (-not $pick) { $pick = $found | Select-Object -First 1 }
+  if ($pick) { $aumid = $pick.AppID }
+  if ($pick -and $pick.AppID -notlike 'Claude_*!*') { Write-Warning ('The Start-menu entry called Claude is not the Microsoft Store app (' + $pick.AppID + '). The launcher looks for the Store app; the shortcut may not start Claude.') }
+  if ($found.Count -gt 1) { Write-Warning ('More than one Start-menu entry is called Claude: ' + (($found | ForEach-Object { $_.AppID }) -join ' ; ') + ' -- using ' + $aumid) }
+} catch {}
+if (-not $aumid) {
+  $aumid = 'Claude_pzs8sxrjxfjjc!Claude'
+  Write-Warning 'Could not find the Claude desktop app in the Start menu (is the Microsoft Store version installed?). Using the default ID; the shortcut may not start Claude.'
+}
+(@{ aumid = $aumid } | ConvertTo-Json) | Set-Content -LiteralPath (Join-Path $here 'config.json') -Encoding ASCII
+Write-Output "aumid = $aumid"
+
+# icon (copied out of the app so it keeps working after Claude updates change the install path)
+$icoPath = Join-Path $here 'claude.ico'
+try {
+  $exe = (Get-Process -Name claude -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '*WindowsApps*Claude_*' } | Select-Object -First 1).Path
+  if (-not $exe) { try { $loc = (Get-AppxPackage -Name 'Claude*' -ErrorAction Stop | Select-Object -First 1).InstallLocation; if ($loc) { $exe = Join-Path $loc 'app\Claude.exe' } } catch {} }
+  if (-not $exe) { $exe = (Get-ChildItem 'C:\Program Files\WindowsApps' -Directory -Filter 'Claude_*' -ErrorAction SilentlyContinue | Select-Object -First 1 | ForEach-Object { Join-Path $_.FullName 'app\Claude.exe' }) }
+  if (-not $exe -or -not (Test-Path -LiteralPath $exe)) { throw 'Claude.exe not found (start Claude once and run this again)' }
+  Add-Type -AssemblyName System.Drawing
+  $ic = [System.Drawing.Icon]::ExtractAssociatedIcon($exe)
+  $fs = [System.IO.File]::Create($icoPath); $ic.Save($fs); $fs.Close()
+  Write-Output "icon  = $icoPath (from $exe)"
+} catch { Write-Output "icon extraction failed: $_" }
+
+function New-Link([string]$dir) {
+  $lnk = Join-Path $dir ($LinkName + '.lnk')
+  # conhost --headless runs PowerShell without ever creating a console window (-WindowStyle Hidden still flashes one)
+  $ps = Join-Path $env:SystemRoot 'System32\conhost.exe'
+  $arg = '--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $here 'launch.ps1') + '"'
+  if ($Art) { $arg += ' -Art ' + $Art }      # bake an explicit artwork choice into the shortcut (default: config.js decides)
+  $ico = ''; if (Test-Path -LiteralPath $icoPath) { $ico = $icoPath }
+  $custom = Join-Path $here 'custom.ico'; if (Test-Path -LiteralPath $custom) { $ico = $custom }   # launcher\custom.ico overrides the Claude icon
+  [LinkMaker]::Create($lnk, $ps, $arg, $here, $ico, 'Claude with the Dawn startup animation', 7)
+  Write-Output "shortcut = $lnk"
+}
+New-Link (Split-Path -Parent $here)                       # the folder that holds launcher\ (repository root)
+if ($Desktop) { New-Link ([Environment]::GetFolderPath('Desktop')) }

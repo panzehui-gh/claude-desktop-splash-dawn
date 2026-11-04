@@ -1,0 +1,87 @@
+{
+  "text": "Welcome back, my dear friend.",
+  "default": "sonia",
+  "_note": "Natural-sounding settings: neural voices sound most human near their own pitch and speed, so only small changes are used. Multilingual (Copilot) voices are the newest and least robotic.",
+  "voices": [
+    {
+      "id": "sonia",
+      "voice": "en-GB-SoniaNeural",
+      "rate": "-6%",
+      "pitch": "+0Hz",
+      "label": "Sonia",
+      "desc": "英式 · 沉静温柔，句尾轻轻上扬（推荐）"
+    },
+    {
+      "id": "ava-multi",
+      "voice": "en-US-AvaMultilingualNeural",
+      "rate": "-6%",
+      "pitch": "+0Hz",
+      "label": "Ava（新）",
+      "desc": "美式 · 最新的语音，温柔、像真人说话"
+    },
+    {
+      "id": "emma-multi",
+      "voice": "en-US-EmmaMultilingualNeural",
+      "rate": "-6%",
+      "pitch": "+0Hz",
+      "label": "Emma（新）",
+      "desc": "美式 · 最新的语音，明亮、口语化"
+    },
+    {
+      "id": "ava",
+      "voice": "en-US-AvaNeural",
+      "rate": "-6%",
+      "pitch": "+2Hz",
+      "label": "Ava",
+      "desc": "美式 · 温和、体贴"
+    },
+    {
+      "id": "jenny",
+      "voice": "en-US-JennyNeural",
+      "rate": "-6%",
+      "pitch": "+2Hz",
+      "label": "Jenny",
+      "desc": "美式 · 最柔和、安慰人的语气"
+    },
+    {
+      "id": "emma",
+      "voice": "en-US-EmmaNeural",
+      "rate": "-6%",
+      "pitch": "+2Hz",
+      "label": "Emma",
+      "desc": "美式 · 清亮"
+    },
+    {
+      "id": "michelle",
+      "voice": "en-US-MichelleNeural",
+      "rate": "-6%",
+      "pitch": "+0Hz",
+      "label": "Michelle",
+      "desc": "美式 · 亲切、平和"
+    },
+    {
+      "id": "libby",
+      "voice": "en-GB-LibbyNeural",
+      "rate": "-6%",
+      "pitch": "+2Hz",
+      "label": "Libby",
+      "desc": "英式 · 优雅、轻柔"
+    },
+    {
+      "id": "emily",
+      "voice": "en-IE-EmilyNeural",
+      "rate": "-6%",
+      "pitch": "+0Hz",
+      "label": "Emily",
+      "desc": "爱尔兰口音 · 柔和、有点俏皮"
+    },
+    {
+      "id": "natasha",
+      "voice": "en-AU-NatashaNeural",
+      "rate": "-6%",
+      "pitch": "+0Hz",
+      "label": "Natasha",
+      "desc": "澳洲口音 · 轻快、亲切"
+    }
+  ]
+}

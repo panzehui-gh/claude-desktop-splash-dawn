@@ -1,0 +1,28 @@
+# Character art is fetched by tools/get-art.ps1 and is not ours to redistribute
+third_party/
+
+# Personal settings (your name etc.); config.example.js is the shared template
+config.js
+
+# Launcher runtime files (same as the original project)
+launcher/launcher.log
+launcher/last_rect.json
+launcher/config.json
+launcher/claude.ico
+launcher/custom.ico
+launcher/edge-profile*/
+*.lnk
+# Built by tools/build-exe.ps1
+*.exe
+
+# Voice line made by tools/make-voice.py (each user generates their own)
+assets/voices/
+
+# Local preview settings
+.claude/
+
+# Video copies made by tools/make-video-variants.py from the original authors' video
+assets/video/
+
+# Early preview screenshot: shows the original authors' character art (not ours to redistribute)
+docs/preview-frames.jpg
