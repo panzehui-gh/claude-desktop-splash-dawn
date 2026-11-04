@@ -91,7 +91,7 @@ To watch the animation without starting Claude, click "预览动画" (preview) o
 - **Welcome line**: greeting and name, with a live preview of how it will look.
 - **Closing voice**: 10 voices; click ▶ to listen and a card to choose; the voice can be turned off and its volume changed.
 - **Background music**: on/off and volume. With both the music and the voice off, the animation is silent.
-- **Visual effects**: Live2D off, or on with the video at 480p / 720p / 1080p / 2K × 30 / 60 fps (default 1080p 30); with Live2D off, the hair sway can be turned on or off; more or fewer petals. Turn these down on slower computers.
+- **Visual effects**: a Live2D switch, and two drop-down lists for the video: resolution (480p / 720p / 1080p / 2K) and frame rate (30 / 60 fps), default 1080p 30 (levels that have not been made are greyed out); with Live2D off, the hair sway can be turned on or off; more or fewer petals. Turn these down on slower computers.
 - **Artwork**: the new version or the original.
 - **Preview**: plays the animation once with the unsaved choices (Claude is not started).
 
@@ -119,7 +119,7 @@ The settings page writes this file, and you can edit it in a text editor too. Al
 
 The launcher switches are the same as in the original (`-NoSound`, `-NoClaude`, `-Fullscreen`, `-Art new|classic`, …) and can be added after `Claude (Dawn).exe`; see the header of `launcher\launch.ps1`.
 
-Page parameters for debugging: `?t=5.2` freezes at a given second, `?speed=0.5` slows down, `?name=xxx` overrides the name, `?voice=emma` picks another voice, `?novideo` skips the eye video, `?novoice` skips the voice, `?nosfx` skips the sound, `?mute` silences everything, `?withvoice` plays the voice even when it is off in `config.js`. `?track` (from `localhost`) measures where the eyes are in each part of the video; the result is built into `js\splash.js`.
+Page parameters for debugging: `?t=5.2` freezes at a given second, `?speed=0.5` slows down, `?name=xxx` overrides the name, `?voice=emma` picks another voice, `?novideo` skips the eye video, `?novoice` skips the voice, `?nosfx` skips the sound, `?mute` silences everything, `?withvoice` plays the voice even when it is off in `config.js`. `?renderaudio` and `?render` (from `localhost`) render the sound to a WAV file and the picture frame by frame, for making a demo video. `?track` (from `localhost`) measures where the eyes are in each part of the video; the result is built into `js\splash.js`.
 
 ## What has been verified
 

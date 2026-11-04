@@ -26,3 +26,6 @@ assets/video/
 
 # Early preview screenshot: shows the original authors' character art (not ours to redistribute)
 docs/preview-frames.jpg
+
+# Demo videos (made with ?render / ?renderaudio): show the original authors' art and a personal name
+demo/

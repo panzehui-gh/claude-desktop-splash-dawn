@@ -1,6 +1,7 @@
 // Startup sound for the Dawn splash, synthesized live with Web Audio (no audio files).
 // 开屏音效：用 Web Audio 现场合成，不用任何音频素材。音符取 D 大调五声音阶（D E F# A B），和画面时间轴对齐。
-// API: DawnSound.create(volume) -> { ok, play(T, {music, speed}), tick(animationClock), fade(sec), loadVoice(dataUrl, gain) -> seconds, state() }
+// API: DawnSound.create(volume, offlineSeconds) -> { ok, play(T, {music, speed}), tick(animationClock), fade(sec), loadVoice(dataUrl, gain) -> seconds, renderAll() -> AudioBuffer, state() }
+// offlineSeconds：不播放，而是把整段声音渲染成一段音频（录演示视频时用，见 splash.js 的 ?renderaudio）
 // play() 只准备好声音列表；页面每一帧调用 tick(动画时钟)，声音按动画时钟播放，画面卡住时声音也一起等。
 // 结尾的语音（assets/voices/<id>.js，由 tools/make-voice.py 生成）在音乐收住之后播放，时间是 T.voice。
 (function () {
@@ -9,9 +10,9 @@
   const D3 = 50, PENTA = [0, 2, 4, 7, 9];                    // D 大调五声音阶（相对 D 的半音）
   const note = (oct, k) => D3 + 12 * oct + PENTA[((k % 5) + 5) % 5] + 12 * Math.floor(k / 5);
 
-  function create(volume) {
+  function create(volume, offlineSeconds) {
     let ctx;
-    try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return { ok: false, play() {}, tick() {}, fade() {}, loadVoice: async () => 0, state: () => 'none' }; }
+    try { ctx = offlineSeconds ? new OfflineAudioContext(2, Math.ceil(48000 * offlineSeconds), 48000) : new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return { ok: false, play() {}, tick() {}, fade() {}, loadVoice: async () => 0, state: () => 'none' }; }
     const master = ctx.createGain(); master.gain.value = volume;
     const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -16; comp.ratio.value = 3;
     master.connect(comp); comp.connect(ctx.destination);
@@ -85,7 +86,7 @@
     // long：可以晚一点开始的长音（垫音、语音），晚开始时从中间接上；短音晚了超过 0.15 秒就不放了
     const ev = (t, fn, long) => events.push({ t, fn, long: !!long });
     function play(T, opts) {
-      if (ctx.state === 'suspended') ctx.resume();
+      if (ctx.state === 'suspended' && !offlineSeconds) ctx.resume();
       speed = (opts && opts.speed) || 1; started = true; events = []; evIdx = 0;
       master.gain.cancelScheduledValues(ctx.currentTime); master.gain.setValueAtTime(volume, ctx.currentTime);
       if (!opts || opts.music !== false) music(T);
@@ -154,7 +155,9 @@
       evIdx = events.length;                     // 不再排新的声音
       const n = ctx.currentTime; master.gain.cancelScheduledValues(n); master.gain.setValueAtTime(master.gain.value, n); master.gain.linearRampToValueAtTime(0, n + sec);
     }
-    return { ok: true, play, tick, fade, loadVoice, state: () => ctx.state };
+    // 离线渲染：所有声音按动画时间轴的理想时间排好（和实时播放一样提前 0.02 秒的余量），然后一次渲染完
+    function renderAll() { for (const e of events) e.fn(e.t / speed + .02, 0); evIdx = events.length; return ctx.startRendering(); }
+    return { ok: true, play, tick, fade, loadVoice, renderAll, state: () => ctx.state };
   }
   window.DawnSound = { create };
 })();

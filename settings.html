@@ -82,6 +82,12 @@
   .chip.sel { border-color: var(--clay); background: var(--clay-soft); color: var(--clay-deep); font-weight: 600; }
   .chip:disabled { opacity: .4; cursor: default; }
   .chip small { font-weight: 400; color: var(--ink-3); margin-left: 4px; }
+  .selects { display: flex; flex-wrap: wrap; gap: 12px; flex: 1 1 300px; }
+  .pick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
+  .pick select { font: inherit; font-size: 14px; color: var(--ink); padding: 6px 30px 6px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: pointer;
+    appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--clay) 50%), linear-gradient(135deg, var(--clay) 50%, transparent 50%);
+    background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+  .pick select:hover, .pick select:focus { border-color: rgba(217,119,87,.5); outline: none; }
   .note { font-size: 12.5px; color: var(--ink-3); margin-top: 6px; line-height: 1.7; }
 </style>
 </head>
@@ -130,10 +136,18 @@
   <section>
     <h2>画面效果 <small>QUALITY</small></h2>
     <p class="hint">配置较低的电脑可以调低这些选项。点“预览动画”可以马上看效果；完整效果建议 1080p 以上。</p>
-    <div class="field-row"><div class="lbl">Live2D</div>
-      <div class="chips" id="qualities"></div>
+    <label class="switch main-switch"><input type="checkbox" id="liveOn"><span class="knob"></span>Live2D 动画</label>
+    <div class="field-row" id="qualityRow"><div class="lbl">画质</div>
+      <div class="selects">
+        <label class="pick">分辨率<select id="qRes">
+          <option value="480p">480p</option><option value="720p">720p</option><option value="1080p">1080p</option><option value="1440p">2K（1440p）</option>
+        </select></label>
+        <label class="pick">帧数<select id="qFps">
+          <option value="30">30 帧</option><option value="60">60 帧</option>
+        </select></label>
+      </div>
     </div>
-    <p class="note" id="qnote">开启：人物是一整段连贯的 Live2D 动画——睁眼、头发和飘带随风飘、眨眼，从头到尾不切换画面。画质越高越清晰，也越吃显卡。<br>关闭：人物是一张静止的图，只睁眼、眨眼（可以让发梢轻轻飘动），最省资源。</p>
+    <p class="note" id="qnote">开启：人物是一整段连贯的 Live2D 动画——睁眼、头发和飘带随风飘、眨眼，从头到尾不切换画面。画质越高越清晰，也越吃显卡（默认 1080p · 30 帧）。<br>关闭：人物是一张静止的图，只睁眼、眨眼（可以让发梢轻轻飘动），最省资源。</p>
     <div class="field-row"><div class="lbl">落叶</div>
       <div class="chips" id="petalsChips"><button class="chip" data-v="more">多（默认）</button><button class="chip" data-v="less">少</button></div>
     </div>
@@ -245,20 +259,32 @@
   bindSlider('voiceVolume', 'voiceVolume', pct); bindSlider('volume', 'volume', pct);
 
   // ---------- 画面效果 ----------
-  const QUALS = [['off', '关闭', '最省资源'], ['480p30', '480p · 30'], ['480p60', '480p · 60'], ['720p30', '720p · 30'], ['720p60', '720p · 60'],
-                 ['1080p30', '1080p · 30', '默认'], ['1080p60', '1080p · 60'], ['1440p30', '2K · 30'], ['1440p60', '2K · 60', '极高']];
-  const qbox = $('qualities');
-  for (const [v, label, tag] of QUALS) {
-    const b = document.createElement('button'); b.className = 'chip'; b.dataset.v = v;
-    b.innerHTML = esc(label) + (tag ? '<small>' + esc(tag) + '</small>' : '');
-    b.addEventListener('click', () => { S.liveVideo = v; paintChips(); dirty(); });
-    qbox.appendChild(b);
+  // Live2D：一个开关 + 两个下拉框（分辨率、帧数）；保存的值仍是 'off' 或 '1080p60' 这样的一个字符串。
+  // 关掉 Live2D 时记住上次选的画质，再打开时不用重新选
+  const RES = ['480p', '720p', '1080p', '1440p'], FPS = ['30', '60'];
+  let lastQ = S.liveVideo !== 'off' ? S.liveVideo : '1080p30';
+  const have = new Set(RES.flatMap(r => FPS.map(f => r + f)));   // 视频文件存在的画质（下面逐个检查）
+  const qRes = $('qRes'), qFps = $('qFps');
+  function paintQuality() {
+    const on = S.liveVideo !== 'off', q = on ? S.liveVideo : lastQ;
+    $('liveOn').checked = on; $('qualityRow').classList.toggle('dim', !on);
+    qRes.value = q.slice(0, -2); qFps.value = q.slice(-2);
     // 还没生成的画质（tools\make-video-variants.py）不能选
-    if (v !== 'off') fetch('assets/video/' + v + '.mp4', { method: 'HEAD' }).then(r => { if (!r.ok) { b.disabled = true; b.title = '还没有生成这个画质：运行 py tools\\make-video-variants.py'; } }).catch(() => {});
+    for (const o of qRes.options) o.disabled = !FPS.some(f => have.has(o.value + f));
+    for (const o of qFps.options) o.disabled = !have.has(qRes.value + o.value);
   }
+  function pickQuality() {
+    let r = qRes.value, f = qFps.value;
+    if (!have.has(r + f)) f = FPS.find(x => have.has(r + x)) || f;   // 换了分辨率而这个帧数没有生成时，改用有的那个
+    lastQ = r + f; if (S.liveVideo !== 'off') S.liveVideo = lastQ;
+    paintChips(); dirty();
+  }
+  qRes.addEventListener('change', pickQuality); qFps.addEventListener('change', pickQuality);
+  $('liveOn').addEventListener('change', () => { S.liveVideo = $('liveOn').checked ? lastQ : 'off'; paintChips(); dirty(); });
+  for (const q of have) fetch('assets/video/' + q + '.mp4', { method: 'HEAD' }).then(r => { if (!r.ok) { have.delete(q); paintQuality(); } }).catch(() => {});
   document.querySelectorAll('#petalsChips .chip').forEach(b => b.addEventListener('click', () => { S.petals = b.dataset.v; paintChips(); dirty(); }));
   function paintChips() {
-    qbox.querySelectorAll('.chip').forEach(b => b.classList.toggle('sel', b.dataset.v === S.liveVideo));
+    paintQuality();
     document.querySelectorAll('#petalsChips .chip').forEach(b => b.classList.toggle('sel', b.dataset.v === S.petals));
     // 口型属于 Live2D，发梢飘动只用于静止的图：只显示当前用得上的那个开关
     $('hairRow').style.display = S.liveVideo === 'off' ? '' : 'none';

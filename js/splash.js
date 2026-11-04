@@ -75,6 +75,7 @@
   ];
 
   const FREEZE = q.has('t') ? parseFloat(q.get('t')) : null;     // ?t=3.2 定格某一帧（调试）
+  const RENDER = q.has('render');   // ?render：逐帧渲染（录演示视频）——不自己播放，由外部依次调用 window.__renderAt(秒) 再截图，见 renderAt
   const FORCE_P = q.has('p') ? parseFloat(q.get('p')) : null;    // ?p=1.5 固定睁眼进度（调试）
   const ZOOM = q.has('zoom') ? parseFloat(q.get('zoom')) : null; // ?zoom=2.6 放大（调试）；?zoomAt=35,46 以画面上这一点（百分比）为中心放大
   const SPEED = q.has('speed') ? clamp(parseFloat(q.get('speed')) || 1, .1, 4) : 1;   // ?speed=0.5 慢放（调试）
@@ -136,7 +137,7 @@
     vid.addEventListener('seeked', () => { if (FREEZE !== null) { washLast = -1; render(FREEZE); } });   // 定格调试：视频跳到位后重画一次
   }
   function syncVideo(tt) {
-    if (!vidOK) return;
+    if (!vidOK || RENDER) return;
     const vt = tt - VIDEO_START;
     if (FREEZE !== null) { if (!vidStarted) { vidStarted = true; vid.currentTime = clamp(vt, 0, (vid.duration || 5) - .02); } return; }   // 定格：只跳一次（否则 seeked → 重画 → 再跳 会死循环）
     if (vt < 0) { if (vidStarted || vid.currentTime > .001) { vid.pause(); vid.currentTime = 0; vidStarted = false; } return; }
@@ -1318,7 +1319,9 @@
       buildSway();
       if (q.has('track') && vidGL) { await trackVideo(); return; }
     } else if (!LAUNCHER) { $('missing').style.display = 'block'; }
-    if (SOUND_ON) { sound = window.DawnSound.create(MUSIC_ON ? VOL : .8); if (!sound.ok) sound = null; }
+    // ?renderaudio：录演示视频用——不播放，把整段声音（音乐 + 语音）渲染成 WAV，POST 到本机测试服务的 /__upload
+    const RENDER_AUDIO = q.has('renderaudio');
+    if (SOUND_ON) { sound = window.DawnSound.create(MUSIC_ON ? VOL : .8, RENDER_AUDIO ? 20 : 0); if (!sound.ok) sound = null; }
     // 语音：解码好之后，把交接挪到语音快说完的时候，保证窗口淡出前整句话说完
     if (sound && VOICE_ON) {
       VOICE_DUR = await Promise.race([sound.loadVoice(window.SPLASH_VOICE, q.has('vvol') ? clamp(+q.get('vvol') || 0, 0, 1.5) : CONF.voiceVolume), new Promise(r => setTimeout(() => r(0), 1500))]);
@@ -1330,7 +1333,32 @@
     }
     if (q.has('perf')) console.log('READY after ' + performance.now().toFixed(0) + ' ms');
     if (FREEZE !== null) { resize(); maskT = 1e9; render(FREEZE); setState('FROZEN'); return; }
-    if (LAUNCHER) whenWindowReady().then(start); else start();
+    if (RENDER_AUDIO && sound) { await renderAudio(); return; }
+    if (RENDER) { resize(); window.__renderAt = renderAt; window.__renderTotal = T.total; window.__renderReady = true; return; }
+    // ?startdelay=4：过几秒再开始（录屏时先摆好窗口、开始录制）
+    if (LAUNCHER) whenWindowReady().then(start); else setTimeout(start, (+q.get('startdelay') || 0) * 1000);
+  }
+  // 逐帧渲染：把动画时钟设到 t，Live2D 视频跳到对应的那一帧，画完这一帧（外部接着截图）。每帧都完整、准确，不受电脑当时快慢的影响
+  async function renderAt(t) {
+    clock = t;
+    if (vidGL) {
+      const vt = clamp(t - VIDEO_START + .004, 0, (vid.duration || 8) - .001);   // 多 4 毫秒：正好落在两帧交界时，浮点误差会让它停在前一帧上（同一帧出现两次）
+      if (Math.abs(vid.currentTime - vt) > 1e-4) { vid.currentTime = vt; await new Promise(r => vid.addEventListener('seeked', r, { once: true })); }
+      swDirty = true;
+    }
+    render(Math.max(0, t));
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  }
+  async function renderAudio() {
+    sound.play(T, { music: MUSIC_ON, speed: SPEED });
+    const buf = await sound.renderAll(), n = Math.min(buf.length, Math.ceil((T.total + .5) * buf.sampleRate));
+    const L = buf.getChannelData(0), R = buf.getChannelData(1), out = new DataView(new ArrayBuffer(44 + n * 4));
+    const str = (o, t) => { for (let i = 0; i < t.length; i++) out.setUint8(o + i, t.charCodeAt(i)); };
+    str(0, 'RIFF'); out.setUint32(4, 36 + n * 4, true); str(8, 'WAVEfmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true);
+    out.setUint32(24, buf.sampleRate, true); out.setUint32(28, buf.sampleRate * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true); str(36, 'data'); out.setUint32(40, n * 4, true);
+    for (let i = 0, o = 44; i < n; i++, o += 4) { out.setInt16(o, clamp(L[i], -1, 1) * 32767, true); out.setInt16(o + 2, clamp(R[i], -1, 1) * 32767, true); }
+    const r = await fetch('/__upload?name=' + encodeURIComponent(q.get('renderaudio') || 'dawn_audio.wav'), { method: 'POST', body: out.buffer });
+    document.title = 'AUDIO_' + (r.ok ? 'DONE' : 'FAILED') + '|' + (n / buf.sampleRate).toFixed(2) + 's|total ' + T.total.toFixed(2);
   }
   boot().catch(e => { console.error(e); if (LAUNCHER) setState('DONE'); });
 
